@@ -1,0 +1,30 @@
+{
+    "name" : "juneym/zf2-cache-mongo",
+    "description" : "ZF2 cache storage compatible library using MongoDB's TTL collection",
+    "keywords" : ["zf2", "cache", "mongo"],
+    "homepage" : "https://github.com/juneym/zf2-cache-mongo",
+    "license" : "MIT",
+    "minimum-stability" : "stable",
+    "authors" : [
+        {
+            "name" : "Raul Martinez Jr",
+            "email" : "juney.m@gmail.com"
+        }
+    ],
+    "require-dev" : {
+        "phpunit/phpunit" : "~3.0"
+    },
+    "require" : {
+        "php" : ">=5.3.23",
+        "zendframework/zend-cache" : "~2.0"
+    },
+    "suggest": {
+        "ext-mongo" : "MongoDB, PHP client for Mongodb"
+    },
+    "autoload" : {
+        "psr-4" : {
+            "Juneym\\Cache\\Storage\\Adapter\\" : "src",
+            "Juneym\\Cache\\Test\\" : "tests"
+        }
+    }
+}

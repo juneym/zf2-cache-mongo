@@ -10,5 +10,13 @@ It seems that there aren't that many people out there who is interested in creat
 The library utilizes  the Time To Live (TTL) collection feature introduced in MongoDB v2.2
 
 
+Required Index
+================
+Assuming that the cache database is called "cachedb" and the collection name is "cache", fhe following
+indexes are required:
 
+    use cachedb
+    db.cache.ensureIndex({ns:1}, {background:true});
+    db.cache.ensureIndex({ns:1, key:1}, {background:true});
+    db.cache.ensureIndex({created:1}, {background:true, expireAfterSeconds: 3600, name: 'colRecordTTl'});
 
