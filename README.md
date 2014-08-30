@@ -38,12 +38,12 @@ Using the Library
         unset($mongoCache);
 
 
-About TTL & Cache Expiry
+About TTL Index & Cache Expiry
 ================
 There are two ways a cached data will expire. 
 
    1. When the difference between the current time and the cache item's `created` time is more than the cache item's `ttl` value (in seconds)
-   2. When the record's `created` value is way past the MongoDB's TTL collection index (`expireAfterSeconds`). Note that MongoDB's garbage collection runs every 60 seconds so don't be surprised if the cached item is still available. MongoDB's garbage collector will eventually remove all qualified records in the background. 
+   2. When the record's `created` value is way past the MongoDB's cache collection TTL index (`expireAfterSeconds`). Note that MongoDB's garbage collection runs every 60 seconds so don't be surprised if the cached item is still available. MongoDB's garbage collector will eventually remove all qualified records in the background. 
 
 Required Index
 ================
