@@ -267,7 +267,6 @@ class Mongo extends Adapter\AbstractAdapter implements
     public function setTags($key, array $tags)
     {
         $this->initMongo();
-        sort($tags);
         $result = $this->collection->update(
             array(
                 'key' => $key,
@@ -325,10 +324,10 @@ class Mongo extends Adapter\AbstractAdapter implements
     {
         $this->initMongo();
 
-        sort($tags);
-        $tagCriteria = $tags;
         if ($disjunction === true) {
             $tagCriteria = array('$in' => $tags);
+        } else {
+            $tagCriteria = array('$all' => $tags);
         }
 
         $criteria = array(
@@ -362,13 +361,14 @@ class Mongo extends Adapter\AbstractAdapter implements
      * @param  bool  $disjunction
      * @return Iterator|bool|null
      */
-    public function getByTags(array $tags,  $disjunction = false) {
+    public function getByTags(array $tags,  $disjunction = false)
+    {
         $this->initMongo();
 
-        sort($tags);
-        $tagCriteria = $tags;
         if ($disjunction === true) {
             $tagCriteria = array('$in' => $tags);
+        } else {
+            $tagCriteria = array('$all' => $tags);
         }
 
         $criteria = array(
