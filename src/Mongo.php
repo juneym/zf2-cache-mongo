@@ -10,7 +10,9 @@ use Zend\Stdlib\ErrorHandler;
 use Zend\Cache\Storage\Adapter;
 
 class Mongo extends Adapter\AbstractAdapter implements
-    Storage\FlushableInterface
+    Storage\FlushableInterface,
+    Storage\ClearByNamespaceInterface,
+    TaggableInterface
 {
 
 
@@ -109,16 +111,14 @@ class Mongo extends Adapter\AbstractAdapter implements
     public function flush()
     {
         $this->initMongo();
-        $result = $this->collection->remove(
-                    array('ns' => $this->namespace),
-                    array('w' => 1)
-                );
-
+        $result = $this->collection->remove(array(), array('w' => 1));
         if (is_array($result) && ($result['ok'] != 1)) {
             throw new Exception(
                 sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
                 $result['code']);
         }
+
+        return true;
     }
 
 
@@ -146,8 +146,10 @@ class Mongo extends Adapter\AbstractAdapter implements
             $current = new \MongoDate();
 
             $success = true;
-
-            if (is_array($data) && ($data['ttl'] > 0) &&
+            if (empty($data)) {
+                $success = false;
+                return $data;
+            } else if (is_array($data) && ($data['ttl'] > 0) &&
                 (($current->sec - $data['created']->sec) > $data['ttl'])) {
                 $data = null; //force expire
                 $success = false;
@@ -225,5 +227,164 @@ class Mongo extends Adapter\AbstractAdapter implements
         return true;
     }
 
+
+    /**
+     * Remove items by given namespace
+     *
+     * @param string $namespace
+     * @return bool
+     */
+    public function clearByNamespace($namespace)
+    {
+
+        $this->initMongo();
+        if ($namespace === '') {
+            throw new Exception\InvalidArgumentException('No namespace given');
+        }
+
+        $result = $this->collection->remove(
+            array('ns' => $namespace),
+            array('w' => 1)
+        );
+
+        if (is_array($result) && ($result['ok'] != 1)) {
+            throw new Exception(
+                sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
+                $result['code']);
+        }
+
+        return true;
+    }
+
+    /**
+     * Set tags to an item by given key.
+     * An empty array will remove all tags.
+     *
+     * @param string   $key
+     * @param string[] $tags
+     * @return bool
+     */
+    public function setTags($key, array $tags)
+    {
+        $this->initMongo();
+        sort($tags);
+        $result = $this->collection->update(
+            array(
+                'key' => $key,
+                'ns' => $this->getOptions()->getNamespace()
+            ),
+            array(
+                '$set' => array(
+                    'tags' => $tags,
+                    'created' => new \MongoDate()
+                )
+            ),
+            array(
+                'w' => 1
+            )
+        );
+
+        if (is_array($result) && ($result['ok'] != 1)) {
+            throw new Exception(
+                sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
+                $result['code']);
+        }
+
+        return true;
+    }
+
+    /**
+     * Get tags of an item by given key
+     *
+     * @param string $key
+     * @return string[]|FALSE
+     */
+    public function getTags($key)
+    {
+        $data = $this->getItem($key);
+        $tags = false;
+        if (!empty($data) && is_array($data))
+        {
+            $tags = isset($data['tags']) ? $data['tags'] : $tags;
+        }
+
+        return $tags;
+    }
+
+    /**
+     * Remove items matching given tags.
+     *
+     * If $disjunction only one of the given tags must match
+     * else all given tags must match.
+     *
+     * @param string[] $tags
+     * @param  bool  $disjunction
+     * @return bool
+     */
+    public function clearByTags(array $tags, $disjunction = false)
+    {
+        $this->initMongo();
+
+        sort($tags);
+        $tagCriteria = $tags;
+        if ($disjunction === true) {
+            $tagCriteria = array('$in' => $tags);
+        }
+
+        $criteria = array(
+            'ns' => $this->getOptions()->getNamespace(),
+            'tags' => $tagCriteria
+        );
+
+
+        $result = $this->collection->remove(
+            $criteria,
+            array('w' => 1)
+        );
+
+        if (is_array($result) && ($result['ok'] != 1)) {
+            throw new Exception(
+                sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
+                $result['code']);
+        }
+
+        return true;
+    }
+
+
+    /**
+     * Return items matching given tags.
+     *
+     * If $disjunction only one of the given tags must match
+     * else all given tags must match.
+     *
+     * @param string[] $tags
+     * @param  bool  $disjunction
+     * @return Iterator|bool|null
+     */
+    public function getByTags(array $tags,  $disjunction = false) {
+        $this->initMongo();
+
+        sort($tags);
+        $tagCriteria = $tags;
+        if ($disjunction === true) {
+            $tagCriteria = array('$in' => $tags);
+        }
+
+        $criteria = array(
+            'ns' => $this->getOptions()->getNamespace(),
+            'tags' => $tagCriteria
+        );
+
+        $cursor = $this->collection->find(
+            $criteria
+        );
+
+        if ($cursor->count() <= 0) {
+            return null;
+        }
+
+        return $cursor;
+    }
 
 }
