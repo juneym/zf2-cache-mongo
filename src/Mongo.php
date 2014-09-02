@@ -147,7 +147,7 @@ class Mongo extends Adapter\AbstractAdapter implements
 
             $success = true;
 
-            if (is_array($data) &&
+            if (is_array($data) && ($data['ttl'] > 0) &&
                 (($current->sec - $data['created']->sec) > $data['ttl'])) {
                 $data = null; //force expire
                 $success = false;
@@ -180,7 +180,7 @@ class Mongo extends Adapter\AbstractAdapter implements
                         'key'  => $normalizedKey,
                         'ns'   => $this->getOptions()->getNamespace(),
                         'data' => $value,
-                        'ttl'  => $this->getOptions()->getTtl(),
+                        'ttl'  => abs($this->getOptions()->getTtl()),
                         'tags' => array(),
                         'created' => new \MongoDate()
                     ),

@@ -104,4 +104,32 @@ class MongoStorageAdapterTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($exist2);
     }
 
+    /**
+     * @depends testCanReadCachedData
+     */
+    public function testCanDisableTTLExpiration()
+    {
+        $options = $this->options;
+        $options['ttl'] = 0; //disable ttl-based expiration
+        $mongoCache = new Storage\Adapter\Mongo($options);
+
+        $cacheKey = md5('some key for ttl-zero test');
+
+        $result = $mongoCache->setItem(
+            $cacheKey,
+            array('x' => 12345, 'y' => 'ASDF')
+        );
+        $this->assertTrue($result);
+
+        $exist1 = $mongoCache->hasItem($cacheKey);
+        $this->assertTrue($exist1);
+
+        sleep(2);
+
+        //should expire after the defined 'ttl' of 3 seconds
+        $exist2 = $mongoCache->hasItem($cacheKey);
+        $this->assertTrue($exist2);
+    }
+
+
 }
