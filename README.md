@@ -53,5 +53,7 @@ indexes are required:
     use cachedb
     db.cache.ensureIndex({ns:1}, {background:true});
     db.cache.ensureIndex({ns:1, key:1}, {background:true});
+    db.cache.ensureIndex({ns:1, tags:1}, {background:true});
     db.cache.ensureIndex({created:1}, {background:true, expireAfterSeconds: 3600, name: 'colRecordTTl'});
+
 
