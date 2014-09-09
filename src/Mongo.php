@@ -8,6 +8,7 @@ use Zend\Cache\Exception;
 use Zend\Cache\Storage;
 use Zend\Stdlib\ErrorHandler;
 use Zend\Cache\Storage\Adapter;
+use Zend\EventManager;
 
 class Mongo extends Adapter\AbstractAdapter implements
     Storage\FlushableInterface,
@@ -151,8 +152,18 @@ class Mongo extends Adapter\AbstractAdapter implements
                 return $data;
             } else if (is_array($data) && ($data['ttl'] > 0) &&
                 (($current->sec - $data['created']->sec) > $data['ttl'])) {
+
+                $this->getEventManager()->trigger(
+                    new Storage\PostEvent(
+                        'onCacheItem.expired.ttl',
+                        $this,
+                        new \ArrayObject(func_get_args()),
+                        $data)
+                );
+
                 $data = null; //force expire
                 $success = false;
+
             }
 
             return $data;
