@@ -267,6 +267,39 @@ class Mongo extends Adapter\AbstractAdapter implements
         return true;
     }
 
+
+    /**
+     * Mark a cache item as expired to ensure that it becomes available
+     * for offline garbage collection
+     *
+     * @param string $normalizedKey the cache key
+     */
+    public function markItemAsExpired($normalizedKey)
+    {
+
+        $result = $this->collection->update(
+            array(
+                'ns' => $this->getOptions()->getNamespace(),
+                'key' => $normalizedKey
+            ),
+            array(
+                '$set' => array(
+                    'key'  => "expired_" . microtime(true) . "_" . $normalizedKey,
+                    'expired' => true
+                )
+            ),
+            array('w' => 1)
+        );
+
+        if (is_array($result) && ($result['ok'] != 1)) {
+            throw new Exception(
+                sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
+                $result['code']);
+        }
+
+        return true;
+    }
+
     /**
      * Set tags to an item by given key.
      * An empty array will remove all tags.
