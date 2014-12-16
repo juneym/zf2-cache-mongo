@@ -45,10 +45,6 @@ class Mongo extends Adapter\AbstractAdapter implements
      */
     public function __construct($options = null)
     {
-        if (version_compare('1.4.4', phpversion('mongo')) > 0) {
-            throw new Exception\ExtensionNotLoadedException("Missing ext/mongo version >= 1.4.4");
-        }
-
         parent::__construct($options);
     }
 
@@ -98,7 +94,14 @@ class Mongo extends Adapter\AbstractAdapter implements
         }
 
         $this->namespace = $options->getNamespace();
-        $this->connection = new \MongoClient($dsn);
+
+        $_options = $options->mongoOptions;
+
+	if (!class_exists('\MongoClient')) {
+           $this->connection = new \Mongo($dsn, $_options);
+        } else {
+           $this->connection = new \MongoClient($dsn, $_options);
+        }
         $this->db     = $this->connection->selectDB($dbname);
         $this->collection = $this->connection->selectCollection($this->db, $collection);
     }

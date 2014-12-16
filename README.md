@@ -19,6 +19,7 @@ Using the Library
        
         $options = array(
           'dsn' => 'mongodb://127.0.0.1',
+	  'mongoOptions' => array(/* any valid options for \Mongo or \MongoClient class constructors  */),
           'dbname' => 'cachedb',
           'collection' => 'cache',
           'ttl' => 10,

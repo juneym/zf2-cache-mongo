@@ -14,6 +14,31 @@ class MongoOptions extends Adapter\AdapterOptions
     protected $dbname;
     protected $dsn;
     protected $collection;
+    protected $mongoOptions = array();
+
+    /**
+     * Set the value for 'mongoOptions'
+     *
+     * @param $value
+     * @return MongoOptions
+     */
+    public function setMongoOptions(array $value)
+    {
+        $this->mongoOptions = $value;
+        return $this;
+    }
+
+    /**
+     * Get the va;ie for 'mongoOptions'
+     *
+     * @return array
+     */
+    public function getMongoOptions()
+    {
+        return $this->mongoOptions;
+    }
+
+
 
     /**
      * Set the database name

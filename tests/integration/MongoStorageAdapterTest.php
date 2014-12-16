@@ -8,6 +8,7 @@ class MongoStorageAdapterTest extends \PHPUnit_Framework_TestCase
 {
     protected $options = array(
         'dsn' => 'mongodb://127.0.0.1',
+	'mongoOptions' => array(),
         'dbname' => 'cachedb',
         'collection' => 'cache',
         'ttl' => 10,
