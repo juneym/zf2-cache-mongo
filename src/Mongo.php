@@ -36,6 +36,13 @@ class Mongo extends Adapter\AbstractAdapter implements
      * @var string
      */
     protected $namespace = 'defaultNs';
+    
+    /**
+     * Flag for allowing the library to throw exceptions for debugging purposes.
+     * 
+     * @var boolean
+     */
+    protected $throwExceptions = true;
 
     /**
      * Constructor
@@ -71,7 +78,16 @@ class Mongo extends Adapter\AbstractAdapter implements
         return parent::setOptions($options);
     }
 
-
+    /**
+     * Enable or disable throwing of exceptions 
+     * 
+     * @param type $value
+     */
+    public function setThrowExceptions($value) 
+    {
+        $this->throwExceptions = ($value == true) ? true: false;
+    }
+    
     /**
      * Initialize the internal
      *
@@ -99,7 +115,7 @@ class Mongo extends Adapter\AbstractAdapter implements
 
 	if (!class_exists('\MongoClient')) {
            $this->connection = new \Mongo($dsn, $_options);
-        } else {
+        } else { 
            $this->connection = new \MongoClient($dsn, $_options);
         }
         $this->db     = $this->connection->selectDB($dbname);
@@ -137,10 +153,10 @@ class Mongo extends Adapter\AbstractAdapter implements
      */
     protected function internalGetItem(& $normalizedKey, & $success = null, & $casToken = null)
     {
-        $this->initMongo();
-
+        
         try {
-
+            $this->initMongo();            
+            
             $data = $this->collection->findOne(
                 array(
                     'ns' => $this->namespace,
@@ -170,10 +186,14 @@ class Mongo extends Adapter\AbstractAdapter implements
             }
 
             return $data;
-        } catch (\Exception $e) {
+        } catch (\MongoException $e) {
+            
+            if ($this->throwExceptions) {
+                throw $e;
+            }
             $success = false;
-            throw $e;
-        }
+            return null;
+        } 
     }
 
     /**
@@ -186,32 +206,40 @@ class Mongo extends Adapter\AbstractAdapter implements
      */
     protected function internalSetItem(& $normalizedKey, & $value)
     {
-        $this->initMongo();
-        $result = $this->collection->update(
-                    array(
-                        'key' => $normalizedKey,
-                        'ns' => $this->getOptions()->getNamespace()
-                    ),
-                    array(
-                        'key'  => $normalizedKey,
-                        'ns'   => $this->getOptions()->getNamespace(),
-                        'data' => $value,
-                        'ttl'  => abs($this->getOptions()->getTtl()),
-                        'tags' => array(),
-                        'created' => new \MongoDate()
-                    ),
-                    array(
-                        'upsert' => true,
-                        'w' => 1
-                    )
-                );
+        try {
+            $this->initMongo();
+            $result = $this->collection->update(
+                        array(
+                            'key' => $normalizedKey,
+                            'ns' => $this->getOptions()->getNamespace()
+                        ),
+                        array(
+                            'key'  => $normalizedKey,
+                            'ns'   => $this->getOptions()->getNamespace(),
+                            'data' => $value,
+                            'ttl'  => abs($this->getOptions()->getTtl()),
+                            'tags' => array(),
+                            'created' => new \MongoDate()
+                        ),
+                        array(
+                            'upsert' => true,
+                            'w' => 1
+                        )
+                    );
 
-        if (is_array($result) && ($result['ok'] != 1)) {
-            throw new Exception(
-                sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
-                $result['code']);
-        }
-
+            if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
+                throw new Exception(
+                    sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
+                    $result['code']);
+                
+            }
+        } catch (\MongoException $e) {
+            if ($this->throwExceptions) {
+                throw $e;
+            }
+            return false;
+        } 
+            
         return true;
     }
 
@@ -224,20 +252,29 @@ class Mongo extends Adapter\AbstractAdapter implements
      */
     protected function internalRemoveItem(& $normalizedKey)
     {
-        $this->initMongo();
-        $result = $this->collection->remove(
-            array(
-                'key' => $normalizedKey,
-                'ns' => $this->getOptions()->getNamespace()
-            ),
-            array('w' => 1 )
-        );
+        try {
+            
+            $this->initMongo();
+            $result = $this->collection->remove(
+                array(
+                    'key' => $normalizedKey,
+                    'ns' => $this->getOptions()->getNamespace()
+                ),
+                array('w' => 1 )
+            );
 
-        if (is_array($result) && ($result['ok'] != 1)) {
-            throw new Exception(
-                sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
-                $result['code']);
-        }
+            if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
+                throw new Exception(
+                    sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
+                    $result['code']);
+            }
+        } catch (\MongoException $e) {
+            if ($this->throwExceptions) {
+                throw $e;
+            }
+            return false;
+        } 
+        
         return true;
     }
 
@@ -250,22 +287,29 @@ class Mongo extends Adapter\AbstractAdapter implements
      */
     public function clearByNamespace($namespace)
     {
-
-        $this->initMongo();
         if ($namespace === '') {
             throw new Exception\InvalidArgumentException('No namespace given');
         }
 
-        $result = $this->collection->remove(
-            array('ns' => $namespace),
-            array('w' => 1)
-        );
+        try {
+            $this->initMongo();
 
-        if (is_array($result) && ($result['ok'] != 1)) {
-            throw new Exception(
-                sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
-                $result['code']);
-        }
+            $result = $this->collection->remove(
+                array('ns' => $namespace),
+                array('w' => 1)
+            );
+
+            if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
+                throw new Exception(
+                    sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
+                    $result['code']);
+            }
+        } catch (\MongoException $e) {
+            if ($this->throwExceptions) {
+                throw $e;
+            }
+            return false;
+        } 
 
         return true;
     }
@@ -279,27 +323,33 @@ class Mongo extends Adapter\AbstractAdapter implements
      */
     public function markItemAsExpired($normalizedKey)
     {
+        try {
+            $this->initMongo();
+            $result = $this->collection->update(
+                array(
+                    'ns' => $this->getOptions()->getNamespace(),
+                    'key' => $normalizedKey
+                ),
+                array(
+                    '$set' => array(
+                        'key'  => "expired_" . microtime(true) . "_" . $normalizedKey,
+                        'expired' => true
+                    )
+                ),
+                array('w' => 1)
+            );
 
-        $result = $this->collection->update(
-            array(
-                'ns' => $this->getOptions()->getNamespace(),
-                'key' => $normalizedKey
-            ),
-            array(
-                '$set' => array(
-                    'key'  => "expired_" . microtime(true) . "_" . $normalizedKey,
-                    'expired' => true
-                )
-            ),
-            array('w' => 1)
-        );
-
-        if (is_array($result) && ($result['ok'] != 1)) {
-            throw new Exception(
-                sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
-                $result['code']);
-        }
-
+            if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
+                throw new Exception(
+                    sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
+                    $result['code']);
+            }
+        } catch (\MongoException $e) {
+            if ($this->throwExceptions) {
+                throw $e;
+            }
+            return false;
+        } 
         return true;
     }
 
@@ -313,28 +363,35 @@ class Mongo extends Adapter\AbstractAdapter implements
      */
     public function setTags($key, array $tags)
     {
-        $this->initMongo();
-        $result = $this->collection->update(
-            array(
-                'key' => $key,
-                'ns' => $this->getOptions()->getNamespace()
-            ),
-            array(
-                '$set' => array(
-                    'tags' => $tags,
-                    'created' => new \MongoDate()
+        try {
+            $this->initMongo();
+            $result = $this->collection->update(
+                array(
+                    'key' => $key,
+                    'ns' => $this->getOptions()->getNamespace()
+                ),
+                array(
+                    '$set' => array(
+                        'tags' => $tags,
+                        'created' => new \MongoDate()
+                    )
+                ),
+                array(
+                    'w' => 1
                 )
-            ),
-            array(
-                'w' => 1
-            )
-        );
-
-        if (is_array($result) && ($result['ok'] != 1)) {
-            throw new Exception(
-                sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
-                $result['code']);
-        }
+            );
+            
+            if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
+                throw new Exception(
+                    sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
+                    $result['code']);
+            }
+        } catch (\MongoException $e) {
+            if ($this->throwExceptions) {
+                throw $e;
+            }
+            return false;
+        }             
 
         return true;
     }
@@ -369,30 +426,39 @@ class Mongo extends Adapter\AbstractAdapter implements
      */
     public function clearByTags(array $tags, $disjunction = false)
     {
-        $this->initMongo();
+        try {
+            
+            $this->initMongo();
 
-        if ($disjunction === true) {
-            $tagCriteria = array('$in' => $tags);
-        } else {
-            $tagCriteria = array('$all' => $tags);
-        }
+            if ($disjunction === true) {
+                $tagCriteria = array('$in' => $tags);
+            } else {
+                $tagCriteria = array('$all' => $tags);
+            }
 
-        $criteria = array(
-            'ns' => $this->getOptions()->getNamespace(),
-            'tags' => $tagCriteria
-        );
+            $criteria = array(
+                'ns' => $this->getOptions()->getNamespace(),
+                'tags' => $tagCriteria
+            );
 
 
-        $result = $this->collection->remove(
-            $criteria,
-            array('w' => 1)
-        );
+            $result = $this->collection->remove(
+                $criteria,
+                array('w' => 1)
+            );
 
-        if (is_array($result) && ($result['ok'] != 1)) {
-            throw new Exception(
-                sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
-                $result['code']);
-        }
+            if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
+                throw new Exception(
+                    sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
+                    $result['code']);
+            }
+            
+        } catch (\MongoException $e) {
+            if ($this->throwExceptions) {
+                throw $e;
+            }
+            return false;
+        }             
 
         return true;
     }
@@ -410,26 +476,35 @@ class Mongo extends Adapter\AbstractAdapter implements
      */
     public function getByTags(array $tags,  $disjunction = false)
     {
-        $this->initMongo();
+        
+        try {
+            
+            $this->initMongo();
 
-        if ($disjunction === true) {
-            $tagCriteria = array('$in' => $tags);
-        } else {
-            $tagCriteria = array('$all' => $tags);
-        }
+            if ($disjunction === true) {
+                $tagCriteria = array('$in' => $tags);
+            } else {
+                $tagCriteria = array('$all' => $tags);
+            }
 
-        $criteria = array(
-            'ns' => $this->getOptions()->getNamespace(),
-            'tags' => $tagCriteria
-        );
+            $criteria = array(
+                'ns' => $this->getOptions()->getNamespace(),
+                'tags' => $tagCriteria
+            );
 
-        $cursor = $this->collection->find(
-            $criteria
-        );
+            $cursor = $this->collection->find(
+                $criteria
+            );
 
-        if ($cursor->count() <= 0) {
+            if ($cursor->count() <= 0) {
+                return null;
+            }
+        } catch (\MongoException $e) {
+            if ($this->throwExceptions) {
+                throw $e;
+            }
             return null;
-        }
+        }             
 
         return $cursor;
     }

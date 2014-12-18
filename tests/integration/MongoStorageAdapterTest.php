@@ -25,7 +25,7 @@ class MongoStorageAdapterTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($result);
         unset($mongoCache);
     }
-
+    
     /**
      * @depends testCanCacheData
      */
@@ -441,4 +441,58 @@ class MongoStorageAdapterTest extends \PHPUnit_Framework_TestCase
 
         unset($mongoCache);
     }
+    
+    /**
+     * @test
+     * @expectedException \MongoConnectionException
+     */
+    public function testShouldThrowAConnectionExceptionByDefault()
+    {
+        $options = array(
+            'dsn' => 'mongodb://127.0.0.1:27013',
+            'mongoOptions' => array(),
+            'dbname' => 'cachedb',
+            'collection' => 'cache',
+            'ttl' => 10,
+            'namespace' => 'stl'
+        );
+        
+        $mongoCache = new Storage\Adapter\Mongo($options);
+        $cacheKey = md5('this is a test key');
+        $result0 = $mongoCache->hasItem($cacheKey);
+        $this->assertFalse($result0);
+    }
+    
+    /**
+     * @test
+     */
+    function testCanRecoverWhenMongoDbConnectionIsNotPossible()
+    {
+        
+        $options = array(
+            'dsn' => 'mongodb://127.0.0.1:27013',
+            'mongoOptions' => array(),
+            'dbname' => 'cachedb',
+            'collection' => 'cache',
+            'ttl' => 10,
+            'namespace' => 'stl'
+        );
+        
+        $mongoCache = new Storage\Adapter\Mongo($options);
+        $mongoCache->setThrowExceptions(false);
+
+        $cacheKey = md5('this is a test key');
+
+        $result0 = $mongoCache->hasItem($cacheKey);
+        $this->assertFalse($result0);
+
+        $result1 = $mongoCache->getItem($cacheKey);
+        $this->assertNull($result1);
+        
+        $result2 = $mongoCache->setItem($cacheKey, 'some_value');
+        $this->assertFalse($result2);
+        
+        unset($mongoCache);
+    }
+    
 }
