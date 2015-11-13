@@ -44,6 +44,8 @@ class MongoStorageAdapterTest extends \PHPUnit_Framework_TestCase
         $this->assertArrayHasKey('ns', $result);
         $this->assertArrayHasKey('tags', $result);
         $this->assertArrayHasKey('created', $result);
+        $this->assertArrayHasKey('expireAt', $result);
+        $this->assertTrue($result['created']->sec < $result['expireAt']->sec);
 
         $this->assertArrayHasKey('ttl', $result);
         $this->assertEquals(10, $result['ttl']);
@@ -57,7 +59,7 @@ class MongoStorageAdapterTest extends \PHPUnit_Framework_TestCase
     /**
      * @depends testCanReadCachedData
      */
-    function testCanManuallyExpireCachedData()
+    function testCanManuallyRemoveCachedData()
     {
         $mongoCache = new Storage\Adapter\Mongo($this->options);
 
@@ -129,7 +131,7 @@ class MongoStorageAdapterTest extends \PHPUnit_Framework_TestCase
 
         sleep(2);
 
-        //should expire after the defined 'ttl' of 3 seconds
+        //should not expire based on ttl.
         $exist2 = $mongoCache->hasItem($cacheKey);
         $this->assertTrue($exist2);
 
@@ -492,6 +494,25 @@ class MongoStorageAdapterTest extends \PHPUnit_Framework_TestCase
         $result2 = $mongoCache->setItem($cacheKey, 'some_value');
         $this->assertFalse($result2);
         
+        unset($mongoCache);
+    }
+
+
+    /**
+     * @throws \MongoException
+     * @throws \Zend\Cache\Exception
+     */
+    public function testCanMarkItemAsExpired()
+    {
+        $mongoCache = new Storage\Adapter\Mongo($this->options);
+
+        $cacheKey = md5('this is a test key' . __METHOD__);
+        $result = $mongoCache->setItem($cacheKey, array('x' => 11111, 'y' => 'ABCDEF' . rand(0,10000)));
+        $this->assertTrue($result);
+        $mongoCache->markItemAsExpired($cacheKey);
+        sleep(10);
+        $data = $mongoCache->getItem($cacheKey);
+        $this->assertNull($data);
         unset($mongoCache);
     }
     

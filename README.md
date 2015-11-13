@@ -55,6 +55,7 @@ indexes are required:
     db.cache.ensureIndex({ns:1}, {background:true});
     db.cache.ensureIndex({ns:1, key:1}, {background:true});
     db.cache.ensureIndex({ns:1, tags:1}, {background:true});
-    db.cache.ensureIndex({created:1}, {background:true, expireAfterSeconds: 3600, name: 'colRecordTTl'});
+    db.cache.ensureIndex({created:1, expireAt:1}, {background: true});
+    db.cache.ensureIndex({expireAt:1}, {expireAfterSeconds: 0, name: 'cache_expire_at'});
 
 

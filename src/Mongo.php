@@ -155,13 +155,14 @@ class Mongo extends Adapter\AbstractAdapter implements
     {
         
         try {
-            $this->initMongo();            
-            
+            $this->initMongo();
+
             $data = $this->collection->findOne(
                 array(
                     'ns' => $this->namespace,
                     'key' => $normalizedKey
             ));
+
 
             $current = new \MongoDate();
 
@@ -208,6 +209,13 @@ class Mongo extends Adapter\AbstractAdapter implements
     {
         try {
             $this->initMongo();
+
+            $currentDtm = new \DateTime("now");
+            $expireDtm  = clone $currentDtm;
+            $ttl = abs($this->getOptions()->getTtl());
+            $expireDtm  = $expireDtm->add(new \DateInterval("PT" . $ttl . "S"));
+
+
             $result = $this->collection->update(
                         array(
                             'key' => $normalizedKey,
@@ -217,9 +225,10 @@ class Mongo extends Adapter\AbstractAdapter implements
                             'key'  => $normalizedKey,
                             'ns'   => $this->getOptions()->getNamespace(),
                             'data' => $value,
-                            'ttl'  => abs($this->getOptions()->getTtl()),
+                            'ttl'  => $ttl,
                             'tags' => array(),
-                            'created' => new \MongoDate()
+                            'created' => new \MongoDate($currentDtm->getTimestamp()),
+                            'expireAt' => new \MongoDate($expireDtm->getTimestamp())
                         ),
                         array(
                             'upsert' => true,
@@ -227,6 +236,9 @@ class Mongo extends Adapter\AbstractAdapter implements
                         )
                     );
 
+            unset($expireDtm);
+            unset($currentDtm);
+            unset($ttl);
             if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
                 throw new Exception(
                     sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
@@ -333,6 +345,7 @@ class Mongo extends Adapter\AbstractAdapter implements
                 array(
                     '$set' => array(
                         'key'  => "expired_" . microtime(true) . "_" . $normalizedKey,
+                        'expireAt' => new \MongoDate(),
                         'expired' => true
                     )
                 ),
@@ -365,6 +378,12 @@ class Mongo extends Adapter\AbstractAdapter implements
     {
         try {
             $this->initMongo();
+
+            $currentDtm = new \DateTime("now");
+            $expireDtm  = clone $currentDtm;
+            $ttl = abs($this->getOptions()->getTtl());
+            $expireDtm  = $expireDtm->add(new \DateInterval("PT" . $ttl . "S"));
+
             $result = $this->collection->update(
                 array(
                     'key' => $key,
@@ -373,14 +392,18 @@ class Mongo extends Adapter\AbstractAdapter implements
                 array(
                     '$set' => array(
                         'tags' => $tags,
-                        'created' => new \MongoDate()
+                        'created' => new \MongoDate($currentDtm->getTimestamp()),
+                        'expireAt' => new \MongoDate($expireDtm->getTimestamp())
                     )
                 ),
                 array(
                     'w' => 1
                 )
             );
-            
+
+            unset($currentDtm);
+            unset($expireDtm);
+            unset($ttl);
             if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
                 throw new Exception(
                     sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
