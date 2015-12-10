@@ -55,6 +55,14 @@ indexes are required:
     db.cache.ensureIndex({ns:1}, {background:true});
     db.cache.ensureIndex({ns:1, key:1}, {background:true});
     db.cache.ensureIndex({ns:1, tags:1}, {background:true});
+    
+
+If you are using version below v0.2.0, please use the following TTL index definition:
+
+    db.cache.ensureIndex({created:1}, {background:true, expireAfterSeconds: 3600, name: 'colRecordTTl'});
+
+Starting in v0.2.0, the `expireAt` field is populated based on the `ttl` value at the time the cache entry has been created (or saved). Use the following index to enforce automatic expiration of record based on `expireAt` field.
+
     db.cache.ensureIndex({created:1, expireAt:1}, {background: true});
     db.cache.ensureIndex({expireAt:1}, {expireAfterSeconds: 0, name: 'cache_expire_at'});
 
