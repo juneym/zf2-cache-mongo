@@ -39,6 +39,43 @@ Using the Library
         unset($mongoCache);
 
 
+Cache Item Attributes
+================
+There are applications that require additional metadata as part of the cache record in MongoDB such
+as "current page addres" or "remote host ip". To do this, use the `setCacheItemAttributes(array)` to attach an array attributes
+to a cache item. When the item is retrieve with an attribute, the data is accessible via the `attr` key. Following is a snippet from the
+tests file. 
+
+```php
+    public function testCanAttachCacheItemAttributes()
+    {
+        $mongoCache = new Storage\Adapter\Mongo($this->options);
+
+        $cacheKey = md5('this is a test key with attributes' . __METHOD__);
+        $itemAttribute = array(
+            'current_page' => 'http://hello-world.com/about-us.html',
+            'browser' => 'Firefox'
+        );
+        $mongoCache->setCacheItemAttributes($itemAttribute);
+        $result = $mongoCache->setItem($cacheKey, array('x' => 11111, 'y' => 'ABCDEF' . rand(0,10000)));
+        $this->assertTrue($result);
+        $data = $mongoCache->getItem($cacheKey);
+
+        $this->assertArrayHasKey('attr', $data);
+        $this->assertEquals($itemAttribute['current_page'], $data['attr']['current_page']);
+        $this->assertEquals($itemAttribute['browser'], $data['attr']['browser']);
+
+        $itemAttribute1 = $mongoCache->getCacheItemAttributes();
+        $this->assertTrue(is_array($itemAttribute1));
+        $this->assertTrue(empty($itemAttribute1));
+
+        unset($mongoCache);
+    }
+```
+
+
+
+
 About TTL Index & Cache Expiry
 ================
 There are two ways a cached data will expire. 

@@ -8,7 +8,7 @@ class MongoStorageAdapterTest extends \PHPUnit_Framework_TestCase
 {
     protected $options = array(
         'dsn' => 'mongodb://127.0.0.1',
-	'mongoOptions' => array(),
+	    'mongoOptions' => array(),
         'dbname' => 'cachedb',
         'collection' => 'cache',
         'ttl' => 10,
@@ -513,6 +513,31 @@ class MongoStorageAdapterTest extends \PHPUnit_Framework_TestCase
         sleep(10);
         $data = $mongoCache->getItem($cacheKey);
         $this->assertNull($data);
+        unset($mongoCache);
+    }
+
+    public function testCanAttachCacheItemAttributes()
+    {
+        $mongoCache = new Storage\Adapter\Mongo($this->options);
+
+        $cacheKey = md5('this is a test key with attributes' . __METHOD__);
+        $itemAttribute = array(
+            'current_page' => 'http://hello-world.com/about-us.html',
+            'browser' => 'Firefox'
+        );
+        $mongoCache->setCacheItemAttributes($itemAttribute);
+        $result = $mongoCache->setItem($cacheKey, array('x' => 11111, 'y' => 'ABCDEF' . rand(0,10000)));
+        $this->assertTrue($result);
+        $data = $mongoCache->getItem($cacheKey);
+
+        $this->assertArrayHasKey('attr', $data);
+        $this->assertEquals($itemAttribute['current_page'], $data['attr']['current_page']);
+        $this->assertEquals($itemAttribute['browser'], $data['attr']['browser']);
+
+        $itemAttribute1 = $mongoCache->getCacheItemAttributes();
+        $this->assertTrue(is_array($itemAttribute1));
+        $this->assertTrue(empty($itemAttribute1));
+
         unset($mongoCache);
     }
     

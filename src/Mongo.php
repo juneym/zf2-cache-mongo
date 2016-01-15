@@ -45,6 +45,13 @@ class Mongo extends Adapter\AbstractAdapter implements
     protected $throwExceptions = true;
 
     /**
+     * Cache Item metadata attributes
+     *
+     * @var array
+     */
+    protected $cacheItemAttributes = array();
+
+    /**
      * Constructor
      *
      * @param  array $options
@@ -55,6 +62,9 @@ class Mongo extends Adapter\AbstractAdapter implements
         parent::__construct($options);
     }
 
+    /**
+     * Destructor
+     */
     public function __destruct() {
         if (!empty($this->connection)) {
             $this->connection->close(TRUE);
@@ -215,21 +225,29 @@ class Mongo extends Adapter\AbstractAdapter implements
             $ttl = abs($this->getOptions()->getTtl());
             $expireDtm  = $expireDtm->add(new \DateInterval("PT" . $ttl . "S"));
 
+            $cacheRecord = array(
+                'key'  => $normalizedKey,
+                'ns'   => $this->getOptions()->getNamespace(),
+                'data' => $value,
+                'ttl'  => $ttl,
+                'tags' => array(),
+                'created' => new \MongoDate($currentDtm->getTimestamp()),
+                'expireAt' => new \MongoDate($expireDtm->getTimestamp())
+            );
+
+            $itemAttr = $this->getCacheItemAttributes();
+            if (!empty($itemAttr)) {
+                $cacheRecord['attr'] = $itemAttr;
+                $this->setCacheItemAttributes(array());
+            }
+
 
             $result = $this->collection->update(
                         array(
                             'key' => $normalizedKey,
                             'ns' => $this->getOptions()->getNamespace()
                         ),
-                        array(
-                            'key'  => $normalizedKey,
-                            'ns'   => $this->getOptions()->getNamespace(),
-                            'data' => $value,
-                            'ttl'  => $ttl,
-                            'tags' => array(),
-                            'created' => new \MongoDate($currentDtm->getTimestamp()),
-                            'expireAt' => new \MongoDate($expireDtm->getTimestamp())
-                        ),
+                        $cacheRecord,
                         array(
                             'upsert' => true,
                             'w' => 1
@@ -239,6 +257,7 @@ class Mongo extends Adapter\AbstractAdapter implements
             unset($expireDtm);
             unset($currentDtm);
             unset($ttl);
+            unset($cacheRecord);
             if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
                 throw new Exception(
                     sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
@@ -530,6 +549,32 @@ class Mongo extends Adapter\AbstractAdapter implements
         }             
 
         return $cursor;
+    }
+
+
+    /**
+     * This method provides a way of attaching attributes to individual cache item on setItem().
+     *
+     * The value for cacheItemAttributes property is cleared after a successful setItem() call.
+     *
+     * @param array $attr   An array of key/value pair. Note that the key must not include characters the violates
+     * MongoDB's token namespace e.g. key with dollar ($) character will cause an error for sure.
+     *
+     * @return Mongo
+     */
+    public function setCacheItemAttributes(array $attr) {
+        $this->cacheItemAttributes = $attr;
+        return $this;
+    }
+
+    /**
+     * Return the current cacheItemAttribute
+     *
+     * @return array
+     */
+    public function getCacheItemAttributes()
+    {
+        return $this->cacheItemAttributes;
     }
 
 }
