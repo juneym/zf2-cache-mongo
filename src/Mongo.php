@@ -180,20 +180,24 @@ class Mongo extends Adapter\AbstractAdapter implements
             if (empty($data)) {
                 $success = false;
                 return $data;
-            } else if (is_array($data) && ($data['ttl'] > 0) &&
-                (($current->sec - $data['created']->sec) > $data['ttl'])) {
+            } elseif (is_array($data) && ($data['ttl'] > 0) &&
+                        (($current->sec - $data['created']->sec) > $data['ttl'])) {
 
-                $this->getEventManager()->trigger(
-                    new Storage\PostEvent(
-                        'onCacheItem.expired.ttl',
-                        $this,
-                        new \ArrayObject(func_get_args()),
-                        $data)
-                );
-
-                $data = null; //force expire
+                 $this->getEventManager()->trigger(
+                     new Storage\PostEvent(
+                     'onCacheItem.expired.ttl',
+                     $this,
+                     new \ArrayObject(func_get_args()),
+                    $data)
+                 );
+                 
+                 $data = null; //force expire
                 $success = false;
 
+            }
+
+            if ($success && isset($data['data']) && is_object($data['data']) && ($data['data'] instanceof \MongoBinData)) {
+                 $data['data'] = unserialize($data['data']->bin);
             }
 
             return $data;
@@ -228,7 +232,7 @@ class Mongo extends Adapter\AbstractAdapter implements
             $cacheRecord = array(
                 'key'  => $normalizedKey,
                 'ns'   => $this->getOptions()->getNamespace(),
-                'data' => $value,
+                'data' => new \MongoBinData(serialize($value), \MongoBinData::GENERIC),
                 'ttl'  => $ttl,
                 'tags' => array(),
                 'created' => new \MongoDate($currentDtm->getTimestamp()),

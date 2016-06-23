@@ -25,7 +25,7 @@ class MongoStorageAdapterTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($result);
         unset($mongoCache);
     }
-    
+
     /**
      * @depends testCanCacheData
      */
@@ -54,6 +54,35 @@ class MongoStorageAdapterTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(12345, $result['data']['x']);
 
         unset($mongoCache);
+    }
+
+    function testCanReadCachedStringData() 
+    {
+       $mongoCache = new Storage\Adapter\Mongo($this->options);
+       $cacheKey = md5('this is a test key' . __METHOD__);
+
+        $result = $mongoCache->setItem($cacheKey, 'This is a sample string data');
+        $this->assertTrue($result);
+
+        $result0 = $mongoCache->hasItem($cacheKey);
+        $this->assertTrue($result0);
+
+        $result = $mongoCache->getItem($cacheKey);
+        $this->assertTrue(is_array($result));
+        $this->assertArrayHasKey('key', $result);
+        $this->assertArrayHasKey('ns', $result);
+        $this->assertArrayHasKey('tags', $result);
+        $this->assertArrayHasKey('created', $result);
+        $this->assertArrayHasKey('expireAt', $result);
+        $this->assertTrue($result['created']->sec < $result['expireAt']->sec);
+
+        $this->assertArrayHasKey('ttl', $result);
+        $this->assertEquals(10, $result['ttl']);
+
+        $this->assertArrayHasKey('data', $result);
+        $this->assertEquals('This is a sample string data', $result['data']);
+
+        unset($mongoCache);       
     }
 
     /**
