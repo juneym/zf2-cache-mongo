@@ -141,7 +141,7 @@ class Mongo extends Adapter\AbstractAdapter implements
     public function flush()
     {
         $this->initMongo();
-        $result = $this->collection->remove(array(), array('w' => 1));
+        $result = $this->collection->remove(array(), array());
         if (is_array($result) && ($result['ok'] != 1)) {
             throw new Exception(
                 sprintf("Error: %s  Err: %s", $result['errmsg'], $result['err']),
@@ -253,8 +253,7 @@ class Mongo extends Adapter\AbstractAdapter implements
                         ),
                         $cacheRecord,
                         array(
-                            'upsert' => true,
-                            'w' => 1
+                            'upsert' => true
                         )
                     );
 
@@ -295,7 +294,7 @@ class Mongo extends Adapter\AbstractAdapter implements
                     'key' => $normalizedKey,
                     'ns' => $this->getOptions()->getNamespace()
                 ),
-                array('w' => 1 )
+                array()
             );
 
             if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
@@ -331,7 +330,7 @@ class Mongo extends Adapter\AbstractAdapter implements
 
             $result = $this->collection->remove(
                 array('ns' => $namespace),
-                array('w' => 1)
+                array()
             );
 
             if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
@@ -372,7 +371,7 @@ class Mongo extends Adapter\AbstractAdapter implements
                         'expired' => true
                     )
                 ),
-                array('w' => 1)
+                array()
             );
 
             if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
@@ -419,9 +418,7 @@ class Mongo extends Adapter\AbstractAdapter implements
                         'expireAt' => new \MongoDate($expireDtm->getTimestamp())
                     )
                 ),
-                array(
-                    'w' => 1
-                )
+                array()
             );
 
             unset($currentDtm);
@@ -490,7 +487,7 @@ class Mongo extends Adapter\AbstractAdapter implements
 
             $result = $this->collection->remove(
                 $criteria,
-                array('w' => 1)
+                array()
             );
 
             if ($this->throwExceptions && is_array($result) && ($result['ok'] != 1)) {
